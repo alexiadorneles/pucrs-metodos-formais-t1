@@ -110,12 +110,27 @@ class {:autocontracts}  Fila
 method Main()
 {
   var fila := new Fila(5);
+
+  // enfileira
   fila.enfileira(1);
   fila.enfileira(2);
-  assert fila.Conteudo == [1,2];
+  fila.enfileira(3);
+  assert fila.Conteudo == [1,2, 3];
+
+  // tamanho
   var q := fila.tamanho();
-  assert q == 2;
+  assert q == 3;
+
+  // desenfileira
   var e := fila.desenfileira();
   assert e == 1;
-  assert fila.Conteudo == [2];
+  assert fila.Conteudo == [2, 3];
+  assert fila.tamanho() == 2;
+
+  // contem
+  var r := fila.contem(1);
+  assert r == false;
+  var r2 := fila.contem(2);
+  assert r2 == true;
+
 }
