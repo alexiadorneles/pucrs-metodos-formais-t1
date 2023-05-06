@@ -60,10 +60,10 @@ class {:autocontracts}  Fila
                     cauda
     }
 
-    method estaVazio() returns (r:bool)
+  method estaVazia() returns (r:bool)
     ensures r <==> |Conteudo| == 0
     {
-        return cauda == 0;
+    return cauda == 0;
     }
 
   method enfileira(e:nat)
@@ -139,4 +139,10 @@ method Main()
   var r2 := fila.contem(2);
   assert r2 == true;
 
+  // estaVazia
+  var vazia := fila.estaVazia();
+  assert vazia == false;
+  var outraFila := new Fila(5);
+  vazia := outraFila.estaVazia();
+  assert vazia == true;
 }
