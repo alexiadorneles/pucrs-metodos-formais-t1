@@ -4,11 +4,11 @@
     predicate: invariante da representação abstrata associada à coleção do tipo fila
 
     Operações
-        - construtor inicia fila fazia
-        - adicionar novo elemento na fila -> enfileira()
-        - remover um elemento da fila e retornar seu valor caso a fila contenha elementos  -> desenfileira()
-        - verificar se um elemento pertence a fila  -> contem()
-        - retornar numero de elementos da fila -> tamanho()
+        - OK construtor inicia fila fazia
+        - OK adicionar novo elemento na fila -> enfileira()
+        - OK remover um elemento da fila e retornar seu valor caso a fila contenha elementos  -> desenfileira()
+        - OK verificar se um elemento pertence a fila  -> contem()
+        - OK retornar numero de elementos da fila -> tamanho()
         - verificar se a fila é vazia ou não -> vazia()
         - concatenar duas filas retornando uma nova fila sem alterar nenhuma das outras -> concat()
 
