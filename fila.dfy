@@ -9,7 +9,7 @@
         - OK remover um elemento da fila e retornar seu valor caso a fila contenha elementos  -> desenfileira()
         - OK verificar se um elemento pertence a fila  -> contem()
         - OK retornar numero de elementos da fila -> tamanho()
-        - verificar se a fila é vazia ou não -> vazia()
+        - EU verificar se a fila é vazia ou não -> vazia()
         - concatenar duas filas retornando uma nova fila sem alterar nenhuma das outras -> concat()
 
     criar método main testando a implementação 
@@ -58,6 +58,12 @@ class {:autocontracts}  Fila
     ensures tamanho() == |Conteudo|
     {
                     cauda
+    }
+
+    method estaVazio() returns (r:bool)
+    ensures r <==> |Conteudo| == 0
+    {
+        return cauda == 0;
     }
 
   method enfileira(e:nat)
