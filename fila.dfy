@@ -19,39 +19,35 @@ class {:autocontracts}  Fila
     {
   var a: array<nat>;
   var cauda: nat;
-  const max: nat;
+  const defaultSize: nat;
 
   ghost var Conteudo: seq<nat>;
-  ghost const TamanhoMaximo: nat;
 
   // invariante
   ghost predicate Valid()  {
-                        max > 0
-    && a.Length == max
-    && 0 <= cauda <= max
+                        defaultSize > 0
+    && a.Length >= defaultSize
+    && 0 <= cauda <= a.Length
     && Conteudo == a[0..cauda]
-    && TamanhoMaximo == max
     }
 
-    constructor (m:nat)
-      requires m > 0
-      ensures TamanhoMaximo == m
+    // inicia fila com 3 elementos
+    constructor ()
       ensures Conteudo == []
+      ensures defaultSize == 3
+      ensures a.Length == 3
     {
-    max := m;
-    a := new nat[m];
+    defaultSize := 3;
+    a := new nat[3];
     cauda := 0;
-
     Conteudo := [];
-    TamanhoMaximo := max;
     }
 
-
-  // TODO: isso sai pq a fila vai ser ilimitada
-  function QuantidadeMaxima():nat
-    ensures QuantidadeMaxima() == TamanhoMaximo
+  method expandir()
+    requires cauda == a.Length
     {
-                             max
+    var novoArray := new nat[cauda + defaultSize];
+
     }
 
   function tamanho():nat
@@ -67,7 +63,7 @@ class {:autocontracts}  Fila
     }
 
   method enfileira(e:nat)
-    requires |Conteudo| < TamanhoMaximo
+    requires cauda < a.Length
     ensures Conteudo == old(Conteudo) + [e]
     {
     a[cauda] := e;
@@ -90,8 +86,7 @@ class {:autocontracts}  Fila
   }
 
   method contem(e: nat) returns (r:bool)
-    ensures r == true ==> exists i :: 0 <= i < cauda && e == a[i]
-    ensures r == false ==> forall i :: 0 <= i < cauda ==> e != a[i]
+    ensures r <==> exists i :: 0 <= i < cauda && e == a[i]
   {
     var i := 0;
 
@@ -115,7 +110,7 @@ class {:autocontracts}  Fila
 
 method Main()
 {
-  var fila := new Fila(5);
+  var fila := new Fila();
 
   // enfileira
   fila.enfileira(1);
@@ -142,7 +137,7 @@ method Main()
   // estaVazia
   var vazia := fila.estaVazia();
   assert vazia == false;
-  var outraFila := new Fila(5);
+  var outraFila := new Fila();
   vazia := outraFila.estaVazia();
   assert vazia == true;
 }
