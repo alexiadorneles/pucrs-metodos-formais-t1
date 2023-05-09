@@ -10,7 +10,7 @@
         - OK verificar se um elemento pertence a fila  -> contem()
         - OK retornar numero de elementos da fila -> tamanho()
         - OK verificar se a fila é vazia ou não -> estaVazia()
-        - concatenar duas filas retornando uma nova fila sem alterar nenhuma das outras -> concat()
+        - OK concatenar duas filas retornando uma nova fila sem alterar nenhuma das outras -> concat()
 
     OK criar método main testando a implementação 
     transformar uso de naturais para inteiros
@@ -115,6 +115,7 @@ class {:autocontracts}  Fila
   static method concat(f1: Fila, f2: Fila) returns (r: Fila)
     requires f1.Valid()
     requires f2.Valid()
+    ensures r.Conteudo == f1.Conteudo + f2.Conteudo
   {
     r := new Fila();
 
@@ -122,20 +123,11 @@ class {:autocontracts}  Fila
 
     while i < f1.cauda
       invariant 0 <= i <= f1.cauda
+      invariant 0 <= i <= r.cauda
       invariant r.cauda <= r.a.Length
       invariant fresh(r.Repr)
       invariant r.Valid()
-    {
-      var valor := f1.a[i];
-      r.enfileira(valor);
-      i := i + 1;
-    }
-
-    while i < f1.cauda
-      invariant 0 <= i <= f1.cauda
-      invariant r.cauda <= r.a.Length
-      invariant fresh(r.Repr)
-      invariant r.Valid()
+      invariant r.Conteudo == f1.Conteudo[0..i]
     {
       var valor := f1.a[i];
       r.enfileira(valor);
@@ -145,62 +137,17 @@ class {:autocontracts}  Fila
     var j := 0;
     while j < f2.cauda
       invariant 0 <= j <= f2.cauda
+      invariant 0 <= j <= r.cauda
       invariant r.cauda <= r.a.Length
       invariant fresh(r.Repr)
       invariant r.Valid()
+      invariant r.Conteudo == f1.Conteudo + f2.Conteudo[0..j]
     {
       var valor := f2.a[j];
       r.enfileira(valor);
       j := j + 1;
     }
   }
-
-  // method concat(f2: Fila) returns (r:Fila)
-  //   requires cauda > 0
-  //   requires f2.cauda > 0
-  // ensures a[..] + f2.a[..] == r.a[..]
-
-  // ensures r.tamanho() == tamanho() + f2.tamanho()
-  // ensures forall i :nat :: 0  <= i < tamanho() ==> r.a[i] == a[i]
-  // ensures forall i :nat :: 0  <= i < f2.tamanho() ==> r.a[f1.tamanho() - 1 + i] == f2.a[i]
-  // ensures Conteudo == old(Conteudo)
-  // ensures cauda == old(cauda)
-  // ensures f2.a == old(f2.a)
-  // {
-  //   r := new Fila();
-  //   var i := 0;
-
-  //   while i < cauda
-  // invariant cauda <= a.Length
-  // invariant 0 <= i <= cauda
-  // invariant r.cauda >= i
-  // invariant r.cauda <= cauda
-  // invariant r.cauda <= r.a.Length
-  // invariant Conteudo == old(Conteudo)
-  // invariant |r.Conteudo| <= |Conteudo|
-  // invariant r.a[0..i] == a[0..i]
-  // invariant r.Conteudo == r.a[0..i]
-  // invariant Conteudo == a[0..cauda]
-  // invariant Conteudo == old(Conteudo)
-  // invariant r.Conteudo == Conteudo[0..i]
-  // invariant forall j:nat :: 0 <= j < i ==> r.a[j] == a[j]
-  // {
-  //   var valor := a[i];
-  //   r.enfileira(valor);
-  //   i := i + 1;
-  // }
-
-  // assert r.a == a;
-
-  // var j := 0;
-  // while j < f2.cauda
-  //   invariant 0 <= j <= f2.cauda
-  // {
-  //   var valor := f2.a[j];
-  //   r.enfileira(f2.a[j]);
-  //   j := j + 1;
-  // }
-  // }
 }
 
 method Main()
@@ -238,4 +185,13 @@ method Main()
   var outraFila := new Fila();
   vazia := outraFila.estaVazia();
   assert vazia == true;
+
+  // concat
+  assert fila.Conteudo == [2, 3, 4];
+  outraFila.enfileira(5);
+  outraFila.enfileira(6);
+  outraFila.enfileira(7);
+  assert outraFila.Conteudo == [5, 6, 7];
+  var concatenada := Fila.concat(fila, outraFila);
+  assert concatenada.Conteudo == [2,3,4,5,6,7];
 }
