@@ -13,16 +13,16 @@
         - OK concatenar duas filas retornando uma nova fila sem alterar nenhuma das outras -> concat()
 
     OK criar método main testando a implementação 
-    transformar uso de naturais para inteiros
+    OK transformar uso de naturais para inteiros
 */
 
 class {:autocontracts}  Fila
     {
-  var a: array<nat>;
+  var a: array<int>;
   var cauda: nat;
   const defaultSize: nat;
 
-  ghost var Conteudo: seq<nat>;
+  ghost var Conteudo: seq<int>;
 
   // invariante
   ghost predicate Valid()  {
@@ -40,7 +40,7 @@ class {:autocontracts}  Fila
       ensures fresh(a)
     {
     defaultSize := 3;
-    a := new nat[3];
+    a := new int[3];
     cauda := 0;
     Conteudo := [];
     }
@@ -57,12 +57,12 @@ class {:autocontracts}  Fila
                       cauda == 0
     }
 
-  method enfileira(e:nat)
+  method enfileira(e:int)
     ensures Conteudo == old(Conteudo) + [e]
     {
 
     if (cauda == a.Length) {
-      var novoArray := new nat[cauda + defaultSize];
+      var novoArray := new int[cauda + defaultSize];
       var i := 0;
 
       forall i | 0 <= i < a.Length
@@ -77,7 +77,7 @@ class {:autocontracts}  Fila
     Conteudo := Conteudo + [e];
     }
 
-  method desenfileira() returns (e:nat)
+  method desenfileira() returns (e:int)
     requires |Conteudo| > 0
     ensures e == old(Conteudo)[0]
     ensures Conteudo == old(Conteudo)[1..]
@@ -91,7 +91,7 @@ class {:autocontracts}  Fila
     Conteudo := a[0..cauda];
   }
 
-  method contem(e: nat) returns (r:bool)
+  method contem(e: int) returns (r:bool)
     ensures r <==> exists i :: 0 <= i < cauda && e == a[i]
   {
     var i := 0;
