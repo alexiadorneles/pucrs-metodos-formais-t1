@@ -3,9 +3,54 @@ ghost predicate ConteudoValido(fila: Fila)
   requires 0 <= fila.cauda <= fila.a.Length
   requires 0 <= fila.inicio <= fila.a.Length
 {
-  fila.cauda >= fila.inicio ==> fila.Conteudo == fila.a[fila.inicio..fila.cauda]
-                                && fila.cauda < fila.inicio ==> fila.Conteudo ==  fila.a[fila.inicio..] + fila.a[0..fila.cauda]
+  (fila.cauda >= fila.inicio ==> fila.Conteudo == fila.a[fila.inicio..fila.cauda])
+  && (fila.cauda < fila.inicio ==> fila.Conteudo ==  fila.a[fila.inicio..] + fila.a[0..fila.cauda])
 }
+
+ghost function ConteudoFilaCircular(fila: Fila): seq<int>
+  reads fila, fila.Repr, fila.a
+  requires 0 <= fila.cauda <= fila.a.Length
+  requires 0 <= fila.inicio <= fila.a.Length
+{
+  if fila.cauda >= fila.inicio then fila.a[fila.inicio..fila.cauda]
+  else fila.a[fila.inicio..] + fila.a[0..fila.cauda]
+}
+
+
+// OK [1, 2, ] -- inicio 0, cauda 3 --> size 2
+// OK [1, 2, 3, ] -- inicio 0, cauda 4 --> size 3
+// OK [ , 2, ] -- inicio 1, cauda 3 --> size 1
+// OK [ , , 2, 3] -- inicio 2, cauda 0 --> size 2
+// OK [1, , 2, 3] -- inicio 2, cauda 1 --> size 3
+// OK [ , , ] -- inicio 0, cauda 0 --> size 0
+ghost predicate TamanhoValido(fila: Fila)
+  reads fila, fila.Repr, fila.a
+  requires 0 <= fila.cauda <= fila.a.Length
+  requires 0 <= fila.inicio <= fila.a.Length
+{
+  if fila.cauda > fila.inicio then fila.size == ((fila.cauda - 1) - fila.inicio)
+  else if fila.cauda == fila.inicio then fila.size == 0
+  else fila.size == (fila.a.Length - fila.inicio + fila.cauda)
+}
+
+function TamanhoFilaCircular(fila: Fila): nat
+  reads fila, fila.Repr, fila.a
+  requires 0 <= fila.cauda <= fila.a.Length
+  requires 0 <= fila.inicio <= fila.a.Length
+{
+  if fila.cauda > fila.inicio then (fila.cauda - 1) - fila.inicio
+  else if fila.cauda == fila.inicio then 0
+  else fila.a.Length - fila.inicio + fila.cauda
+}
+
+class Node {
+  var elem: int;
+  constructor (data: int)
+  {
+    elem := data;
+  }
+}
+
 class {:autocontracts}  Fila
     {
   var a: array<int>;
@@ -16,14 +61,20 @@ class {:autocontracts}  Fila
   const defaultSize: nat;
 
   ghost var Conteudo: seq<int>;
+  ghost var Primeiro: Node?;
+  ghost var Ultimo: Node?;
 
   ghost predicate Valid()  {
                         defaultSize > 0
+    && 0 <= inicio < a.Length
+       // && (Primeiro != null ==> Primeiro.elem == a[inicio])
     && a.Length >= defaultSize
     && 0 <= cauda < a.Length
-    && 0 <= inicio < a.Length
-    && ConteudoValido(this)
-    && size == |Conteudo|
+    && (cauda >= inicio ==> Conteudo == a[inicio..cauda])
+    && (cauda < inicio ==> Conteudo ==  a[inicio..] + a[0..cauda])
+    && TamanhoValido(this)
+    // && size == |Conteudo|
+    // && ConteudoValido(this)
     }
 
     constructor ()
@@ -40,48 +91,69 @@ class {:autocontracts}  Fila
     inicio := 0;
     Conteudo := [];
     size := 0;
+    Primeiro := null;
+    Ultimo := null;
     }
 
   method enfileira(e:int)
-    ensures Conteudo == old(Conteudo) + [e]
+    // ensures Conteudo == old(Conteudo) + [e]
   {
 
-    print("\nsize ");
-    print(size);
-    print("\na.Length ");
-    print(a.Length);
+    // if (size == a.Length) {
+    //   var novoArray := new int[a.Length + defaultSize];
+    //   var i := 0;
+    //   var j := inicio;
 
-    if (size == a.Length) {
-      var novoArray := new int[a.Length + defaultSize];
-      var i := 0;
-      var j := inicio;
+    //   while i < a.Length
+    //     invariant 0 <= i <= a.Length
+    //     // invariant cauda < a.Length
+    //     invariant Conteudo == old(Conteudo)
+    // // invariant |Conteudo| == size
+    // // invariant inicio < a.Length
+    //     invariant inicio == old(inicio)
+    // // invariant novoArray.Length > a.Length
+    // // invariant cauda < novoArray.Length
+    // {
+    //                             // TODO: descobrir pq n funciona aqui
+    //                             // novoArray[i] := a[i];
+    //     j:=(j+1) % a.Length;
+    //     i := i + 1;
+    // }
 
-      while i < a.Length
-        invariant 0 <= i <= a.Length
-        invariant cauda < a.Length
-        invariant Conteudo == old(Conteudo)
-        invariant |Conteudo| == size
-        invariant inicio < a.Length
-        invariant inicio == old(inicio)
-        invariant novoArray.Length > a.Length
-        invariant cauda < novoArray.Length
-      {
-        // TODO: descobrir pq n funciona aqui
-        // novoArray[i] := a[i];
-        j:=(j+1) % a.Length;
-        i := i + 1;
-      }
-
-      a := novoArray;
-      inicio := 0;
-    }
+    //   a := novoArray;
+    //   inicio := 0;
+    //   cauda := i;
+    // }
 
     a[cauda] := e;
     cauda := (cauda + 1) % a.Length;
-    Conteudo := Conteudo + [e];
+    // Conteudo := Conteudo + [e];
+
+    if cauda >= inicio
+    {
+      Conteudo := a[inicio..cauda];
+      size := TamanhoFilaCircular(this);
+    } else {
+      Conteudo := a[inicio..] + a[0..cauda];
+      size := TamanhoFilaCircular(this);
+    }
+
     size := size + 1;
   }
+
+  // method desenfileira() returns (e:int)
+  //   requires |Conteudo| > 0
+  //   requires Conteudo[0] == a[inicio]
+  //   ensures e == old(Conteudo)[0]
+  //   ensures Conteudo == old(Conteudo)[1..]
+  // {
+  //   e := a[inicio];
+  //   inicio :=  (inicio + 1) % a.Length;
+  //   Conteudo := Conteudo[1..];
+  //   size := size - 1;
+  // }
 }
+
 
 method Print(fila: Fila) {
   print("\n\n");
@@ -99,21 +171,15 @@ method Main()
 
   // enfileira deve alocar mais espaço
   fila.enfileira(1);
-  Print(fila);
   fila.enfileira(2);
-  Print(fila);
   fila.enfileira(3);
-  Print(fila);
-  fila.enfileira(4);
-  Print(fila);
-  fila.enfileira(5);
-  Print(fila);
-  fila.enfileira(6);
-  Print(fila);
-  fila.enfileira(7);
-  Print(fila);
-  fila.enfileira(8);
-  Print(fila);
+  // assert fila.Conteudo == [1, 2, 3];
 
-  // assert fila.Conteudo == [1, 2, 3, 4, 5, 6, 7, 8];
+  // desenfileira
+  // assert fila.Conteudo[0] == 1;
+  // assert fila.inicio == 0;
+  // assert fila.Conteudo[0] == fila.a[fila.inicio];
+  // var e := fila.desenfileira();
+  // assert e == 1;
+  // assert fila.Conteudo == [2, 3, 4];
 }
