@@ -37,9 +37,9 @@ class {:autocontracts} Queue {
     && (tail == head <==> (head == 0 && tail == 0) || |Content| == a.Length)
     // && (|Content| > 0 ==> head != tail)
     && (
+    (tail == head ==> (Content == [] || |Content| == a.Length)) &&
     (tail > head ==> (Content == a[head..tail])) &&
-    (tail < head ==> (Content == a[head..] + a[0..tail])) &&
-    (tail == head ==> (Content == [] || |Content| == a.Length))
+    (tail < head ==> (Content == a[head..] + a[0..tail]))
     )
     && qSize == |Content|
     // && (|Content| > 0 ==> First == Content[0])
@@ -57,14 +57,12 @@ class {:autocontracts} Queue {
 
   method enqueue(e: int)
     // requires head == 0 ==> ((tail + 1) % a.Length) != 0
-    requires |Content| < a.Length
+    // requires |Content| < a.Length
     ensures a.Length >= old(a.Length)
     ensures Content == old(Content) + [e]
     ensures head == old(head)
-    // ensures a[head] == old(a[head])
     ensures old(|Content|) > 0 ==> Content[0] == old(Content[0])
-    {
-
+  {
 
     // primeiro enqueue
     if (qSize == 0) {
@@ -90,16 +88,19 @@ class {:autocontracts} Queue {
         invariant newArr.Length > a.Length
         invariant 0 <= i < a.Length
         invariant qSize == old(qSize)
+        invariant Content == old(Content)
+        invariant head == old(head)
         invariant fresh(newArr)
-    {
+      {
         newArr[iterations] := a[i];
         iterations := iterations + 1;
         i := (i + 1) % a.Length;
-    }
+      }
 
       tail := a.Length;
       head := 0;
       a := newArr;
+      Content := a[head..tail];
     }
 
     assert |Content| > 0 ==> a[head] == Content[0];
@@ -108,7 +109,7 @@ class {:autocontracts} Queue {
     Content := Content + [e];
     qSize := qSize + 1;
     // First := Content[0];
-    }
+  }
 
   // se fila vazia, head e tail no 0
   // method dequeue() returns (e: int)
@@ -123,14 +124,24 @@ class {:autocontracts} Queue {
   //   }
   //   }
 
-  method contains(e: int) returns (r: bool) ensures Content == old(Content) ensures r <==> e in Content
+  // method contains(e: int) returns (r: bool) ensures Content == old(Content) ensures r <==> e in Content
 
-  method size() returns (r: nat) ensures Content == old(Content) ensures r == |Content|
+  // method size() returns (r: nat) ensures Content == old(Content) ensures r == |Content|
 
-  method isEmpty() returns (r: bool) ensures Content == old(Content) ensures r == (|Content| == 0)
+  // method isEmpty() returns (r: bool) ensures Content == old(Content) ensures r == (|Content| == 0)
 
-  method concat(queue: Queue) returns (newQueue: Queue) requires queue.Valid() requires |queue.Content| > 0 requires |Content| > 0 ensures queue.Content == old(queue.Content) ensures Content == old(Content) ensures newQueue.Content == Content + queue.Content
+  // method concat(queue: Queue) returns (newQueue: Queue) requires queue.Valid() requires |queue.Content| > 0 requires |Content| > 0 ensures queue.Content == old(queue.Content) ensures Content == old(Content) ensures newQueue.Content == Content + queue.Content
 
+}
+
+method Print(fila: Queue) {
+  print("\n\n");
+  var i := 0;
+  while i < fila.a.Length{
+    print(fila.a[i]);
+    print("  ");
+    i := i + 1;
+  }
 }
 
 method Main() {
@@ -140,7 +151,10 @@ method Main() {
   queue.enqueue(1);
   queue.enqueue(2);
   queue.enqueue(3);
-  assert queue.Content == [1,2,3];
+  queue.enqueue(4);
+  queue.enqueue(5);
+  assert queue.Content == [1,2,3,4,5];
+  Print(queue);
 
   // desenfileirar
   // var value := queue.dequeue();
