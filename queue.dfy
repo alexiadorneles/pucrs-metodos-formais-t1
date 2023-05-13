@@ -15,6 +15,16 @@
     criar método main testando a implementação 
 */
 
+ghost predicate ContentIsValid(Content: seq<int>, a: array<int>, head: nat, contentSize:nat, MaxSize: nat)
+  requires a.Length == MaxSize
+  requires MaxSize == 0 ==> contentSize == head == 0 && Content == []
+  requires MaxSize != 0 ==> contentSize <= MaxSize && head < MaxSize
+  reads a
+{
+  (Content == if head + contentSize <= MaxSize then a[head..head+contentSize]
+              else a[head..] + a[..head+contentSize-MaxSize])
+}
+
 class {:autocontracts} Queue {
 
   ghost var Content: seq<int>;
@@ -75,24 +85,13 @@ class {:autocontracts} Queue {
     var headCopy := head;
     var ContentCopy := Content;
     var contentSizeCopy := contentSize;
-    assert headCopy == head;
-    assert ContentCopy == Content;
-    assert contentSizeCopy == contentSize;
     r := false;
 
     var count := 0;
     while count < contentSize
       invariant 0 <= headCopy < a.Length
-      invariant 0 <= count <= contentSize
       invariant contentSizeCopy == contentSize - count
-      invariant contentSize <= a.Length
-      invariant contentSizeCopy == |ContentCopy|
-      invariant MaxSize == old(MaxSize)
-      invariant (ContentCopy == if headCopy + contentSizeCopy <= a.Length
-                                then a[headCopy..headCopy+contentSizeCopy]
-                                else a[headCopy..] + a[..headCopy+contentSizeCopy-MaxSize]
-    )
-      invariant (|ContentCopy| > 0 ==> a[headCopy] == ContentCopy[0])
+      invariant ContentIsValid(ContentCopy, a, headCopy, contentSizeCopy, MaxSize)
       invariant Content[count..] == ContentCopy
       invariant forall j : nat :: 0 <= j < count ==> Content[j] != el
     {
@@ -105,9 +104,7 @@ class {:autocontracts} Queue {
       count := count + 1;
       headCopy, contentSizeCopy := if headCopy + 1 == a.Length then 0 else headCopy + 1, contentSizeCopy - 1;
       ContentCopy := ContentCopy[1..];
-
     }
-
     }
 
   function size(): nat
@@ -128,7 +125,6 @@ class {:autocontracts} Queue {
     ensures queue.Content == old(queue.Content)
     ensures Content == old(Content)
     ensures newQueue.Content == Content + queue.Content
-
 }
 
 method Main() {
