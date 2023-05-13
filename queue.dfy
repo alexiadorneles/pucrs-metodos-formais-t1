@@ -67,9 +67,48 @@ class {:autocontracts} Queue {
     Content := Content[1..];
     }
 
-  method contains(e: int) returns (r: bool)
+  method contains(el: int) returns (r: bool)
+    requires |Content| > 0
     ensures Content == old(Content)
-    ensures r <==> e in Content
+    ensures r <==> el in Content
+    {
+    var headCopy := head;
+    var ContentCopy := Content;
+    var contentSizeCopy := contentSize;
+    assert headCopy == head;
+    assert ContentCopy == Content;
+    assert contentSizeCopy == contentSize;
+    r := false;
+
+    var count := 0;
+    while count < contentSize
+      invariant 0 <= headCopy < a.Length
+      invariant 0 <= count <= contentSize
+      invariant contentSizeCopy == contentSize - count
+      invariant contentSize <= a.Length
+      invariant contentSizeCopy == |ContentCopy|
+      invariant MaxSize == old(MaxSize)
+      invariant (ContentCopy == if headCopy + contentSizeCopy <= a.Length
+                                then a[headCopy..headCopy+contentSizeCopy]
+                                else a[headCopy..] + a[..headCopy+contentSizeCopy-MaxSize]
+    )
+      invariant (|ContentCopy| > 0 ==> a[headCopy] == ContentCopy[0])
+      invariant Content[count..] == ContentCopy
+      invariant forall j : nat :: 0 <= j < count ==> Content[j] != el
+    {
+      var e := a[headCopy];
+      assert e == ContentCopy[0];
+      if (e == el) {
+        r:= true;
+        return;
+    }
+      count := count + 1;
+      headCopy, contentSizeCopy := if headCopy + 1 == a.Length then 0 else headCopy + 1, contentSizeCopy - 1;
+      ContentCopy := ContentCopy[1..];
+
+    }
+
+    }
 
   function size(): nat
     ensures size() == |Content|
@@ -106,10 +145,10 @@ method Main() {
   assert !queue.isEmpty();
 
   // contains
-  // var includes := queue.contains(2);
-  // assert includes;
-  // includes := queue.contains(3);
-  // assert !includes;
+  var result := queue.contains(2);
+  assert result;
+  result := queue.contains(3);
+  assert !result;
 
   // dequeue
   var value := queue.dequeue();
