@@ -39,25 +39,31 @@ class {:autocontracts} Queue {
     (MaxSize == 0 ==> contentSize == head == 0 && Content == []) &&
     (MaxSize != 0 ==> contentSize <= MaxSize && head < MaxSize) &&
     (Content == if head + contentSize <= MaxSize then a[head..head+contentSize]
-              else a[head..] + a[..head+contentSize-MaxSize]) &&
-    (|Content| > 0 ==> a[head] == Content[0])
+              else a[head..] + a[..head+contentSize-MaxSize])
     }
 
     constructor()
       ensures Content == []
-      ensures MaxSize == 5
+      ensures MaxSize == 3
     {
-    a := new int[5];
+    a := new int[3];
     head, contentSize := 0, 0;
-    Content, MaxSize := [], 5;
+    Content, MaxSize := [], 3;
     }
 
   method enqueue(e: int)
-    requires |Content| < MaxSize
     ensures Content == old(Content) + [e]
-    ensures MaxSize == old(MaxSize)
-    ensures head == old(head)
+    ensures MaxSize >= old(MaxSize)
     {
+    if a.Length == contentSize {
+                           // duplica o tamanho da array
+      var more := a.Length + 1;
+      var d := new int[a.Length + more];
+      forall i | 0 <= i < a.Length {
+        d[if i < head then i else i + more] := a[i];
+    }
+      MaxSize, a, head := MaxSize + more, d, if contentSize == 0 then 0 else head + more;
+    }
     var nextEmpty := if head + contentSize < a.Length
     then head + contentSize
     else head + contentSize - a.Length;
@@ -81,7 +87,7 @@ class {:autocontracts} Queue {
     requires |Content| > 0
     ensures Content == old(Content)
     ensures r <==> el in Content
-    {
+  {
     var headCopy := head;
     var ContentCopy := Content;
     var contentSizeCopy := contentSize;
@@ -100,31 +106,41 @@ class {:autocontracts} Queue {
       if (e == el) {
         r:= true;
         return;
-    }
+      }
       count := count + 1;
       headCopy, contentSizeCopy := if headCopy + 1 == a.Length then 0 else headCopy + 1, contentSizeCopy - 1;
       ContentCopy := ContentCopy[1..];
     }
-    }
+  }
 
   function size(): nat
     ensures size() == |Content|
-    {
-                 contentSize
-    }
+  {
+    contentSize
+  }
 
   function isEmpty(): bool
     ensures isEmpty() == (|Content| == 0) {
-                          contentSize == 0
-    }
+    contentSize == 0
+  }
 
-  method concat(queue: Queue) returns (newQueue: Queue)
-    requires queue.Valid()
-    requires |queue.Content| > 0
-    requires |Content| > 0
-    ensures queue.Content == old(queue.Content)
-    ensures Content == old(Content)
-    ensures newQueue.Content == Content + queue.Content
+  // method concat(queue: Queue) returns (newQueue: Queue)
+  //   requires queue.Valid()
+  //   requires |queue.Content| > 0
+  //   requires |Content| > 0
+  //   ensures queue.Content == old(queue.Content)
+  //   ensures Content == old(Content)
+  //   ensures newQueue.Content == Content + queue.Content
+}
+
+method Print(fila: Queue) {
+  print("\n\n");
+  var i := 0;
+  while i < fila.a.Length{
+    print(fila.a[i]);
+    print("  ");
+    i := i + 1;
+  }
 }
 
 method Main() {
@@ -134,26 +150,33 @@ method Main() {
 
   queue.enqueue(1);
   queue.enqueue(2);
-  assert queue.Content == [1, 2];
+  queue.enqueue(3);
+  queue.enqueue(4);
+  queue.enqueue(5);
+  Print(queue);
+  assert queue.Content == [1, 2, 3, 4, 5];
 
   // size check
-  assert queue.size() == 2;
+  assert queue.size() == 5;
   assert !queue.isEmpty();
 
   // contains
   var result := queue.contains(2);
   assert result;
-  result := queue.contains(3);
+  result := queue.contains(10);
   assert !result;
 
   // dequeue
   var value := queue.dequeue();
   assert value == 1;
-  assert queue.Content == [2];
+  assert queue.Content == [2, 3, 4, 5];
   // another size check after dequeue
-  assert queue.size() == 1;
+  assert queue.size() == 4;
 
   // is empty
-  var el := queue.dequeue();
-  assert queue.isEmpty();
+  var queue2 := new Queue();
+  assert queue2.isEmpty();
+  queue2.enqueue(1);
+  var v := queue2.dequeue();
+  assert queue2.isEmpty();
 }
