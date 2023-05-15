@@ -1,9 +1,3 @@
-ghost predicate DifferentQueues(q1: Queue, q2: Queue)
-  reads q1, q2
-{
-  q1.a != q2.a && q1.Content != q2.Content && q1 != q2
-}
-
 ghost predicate ContentIsValid(Content: seq<int>, a: array<int>, head: nat, contentSize:nat, ArraySize: nat)
   requires a.Length == ArraySize
   requires ArraySize == 0 ==> contentSize == head == 0 && Content == []
@@ -12,6 +6,19 @@ ghost predicate ContentIsValid(Content: seq<int>, a: array<int>, head: nat, cont
 {
   (Content == if head + contentSize <= ArraySize then a[head..head+contentSize]
               else a[head..] + a[..head+contentSize-ArraySize])
+}
+
+
+ghost predicate SameQueue(q1: Queue, q2: Queue)
+  reads q1, q2, q1.a, q2.a
+{
+  q1 == q2
+  && q1.Content == q2.Content
+  && q1.a.Length == q2.a.Length
+  && (forall j : nat :: j < q1.a.Length ==> q1.a[j] == q2.a[j])
+  && q1.head == q2.head
+  && q1.ArraySize == q2.ArraySize
+  && q1.contentSize == q2.contentSize
 }
 
 class {:autocontracts} Queue {
@@ -46,18 +53,21 @@ class {:autocontracts} Queue {
     ensures ArraySize >= old(ArraySize)
   {
     if a.Length == contentSize {
-      // duplica o tamanho da array
-      var more := a.Length + 1;
-      var d := new int[a.Length + more];
+      // duplica o size da array
+      var additionalSpace := a.Length + 1;
+      var newArray := new int[a.Length + additionalSpace];
+
       forall i | 0 <= i < a.Length {
-        d[if i < head then i else i + more] := a[i];
+        newArray[if i < head then i else i + additionalSpace] := a[i];
       }
-      ArraySize, a, head := ArraySize + more, d, if contentSize == 0 then 0 else head + more;
+
+      ArraySize := ArraySize + additionalSpace;
+      a := newArray;
+      head := if contentSize == 0 then 0 else head + additionalSpace;
     }
-    var nextEmpty := if head + contentSize < a.Length
-    then head + contentSize
-    else head + contentSize - a.Length;
-    a[nextEmpty] := e;
+
+    var tail := if head + contentSize < a.Length then head + contentSize  else head + contentSize - a.Length;
+    a[tail] := e;
     contentSize := contentSize + 1;
     Content := Content + [e];
   }
@@ -69,7 +79,8 @@ class {:autocontracts} Queue {
   {
     e := a[head];
     assert e == Content[0];
-    head, contentSize := if head + 1 == a.Length then 0 else head + 1, contentSize - 1;
+    head := if head + 1 == a.Length then 0 else head + 1;
+    contentSize := contentSize - 1;
     Content := Content[1..];
   }
 
@@ -78,21 +89,20 @@ class {:autocontracts} Queue {
     ensures Content == old(Content)
     ensures r <==> el in Content
   {
-    var headCopy := head;
+    var i := head;
     var ContentCopy := Content;
-    var contentSizeCopy := contentSize;
     r := false;
 
     var count := 0;
     while count < contentSize
-      invariant 0 <= headCopy < a.Length
-      invariant contentSizeCopy == contentSize - count
-      invariant ContentIsValid(Content[count..], a, headCopy, contentSize - count, ArraySize)
+      invariant 0 <= i < a.Length
+      invariant 0 <= count <= contentSize
+      invariant ContentIsValid(Content[count..], a, i, contentSize - count, ArraySize)
 
       invariant Content[count..] == ContentCopy
       invariant forall j : nat :: 0 <= j < count ==> Content[j] != el
     {
-      var e := a[headCopy];
+      var e := a[i];
       assert e == ContentCopy[0];
       assert e in Content;
       if (e == el) {
@@ -100,7 +110,7 @@ class {:autocontracts} Queue {
         return;
       }
       count := count + 1;
-      headCopy, contentSizeCopy := if headCopy + 1 == a.Length then 0 else headCopy + 1, contentSizeCopy - 1;
+      i:= if i + 1 == a.Length then 0 else i + 1;
       ContentCopy := ContentCopy[1..];
     }
   }
@@ -218,47 +228,45 @@ method Print(fila: Queue) {
 }
 
 method Main() {
-  // add 2 items
-  var queue := new Queue(3);
-  assert queue.size() == 0;
+  var fila := new Queue(3);
 
-  queue.enqueue(1);
-  queue.enqueue(2);
-  queue.enqueue(3);
-  queue.enqueue(4);
-  queue.enqueue(5);
-  Print(queue);
-  assert queue.Content == [1, 2, 3, 4, 5];
+  // enqueue deve alocar mais espaço
+  fila.enqueue(1);
+  fila.enqueue(2);
+  fila.enqueue(3);
+  fila.enqueue(4);
+  assert fila.Content == [1, 2, 3, 4];
 
-  // size check
-  assert queue.size() == 5;
-  assert !queue.isEmpty();
-
-  // contains
-  var result := queue.contains(2);
-  assert result;
-  result := queue.contains(10);
-  assert !result;
+  // size
+  var q := fila.size();
+  assert q == 4;
 
   // dequeue
-  var value := queue.dequeue();
-  assert value == 1;
-  assert queue.Content == [2, 3, 4, 5];
-  // another size check after dequeue
-  assert queue.size() == 4;
+  var e := fila.dequeue();
+  assert e == 1;
+  assert fila.Content == [2, 3, 4];
+  assert fila.size() == 3;
 
-  // is empty
-  var queue2 := new Queue(3);
-  assert queue2.isEmpty();
-  queue2.enqueue(6);
-  var v := queue2.dequeue();
-  assert queue2.isEmpty();
-  queue2.enqueue(6);
-  queue2.enqueue(7);
+  // contains
+  assert fila.Content == [2, 3, 4];
+  var r := fila.contains(1);
+  assert r == false;
+  var r2 := fila.contains(2);
+  assert r2 == true;
+
+  // isEmpty
+  var vazia := fila.isEmpty();
+  assert vazia == false;
+  var outraFila := new Queue(3);
+  vazia := outraFila.isEmpty();
+  assert vazia == true;
 
   // concat
-  var newQueue := queue.concat(queue);
-  assert newQueue.Content == [2, 3, 4, 5, 2, 3, 4, 5];
-  Print(newQueue);
-  // assert newQueue.Content == [2, 3, 4, 5];
+  assert fila.Content == [2, 3, 4];
+  outraFila.enqueue(5);
+  outraFila.enqueue(6);
+  outraFila.enqueue(7);
+  assert outraFila.Content == [5, 6, 7];
+  var concatenada := fila.concat(outraFila);
+  assert concatenada.Content == [2,3,4,5,6,7];
 }
