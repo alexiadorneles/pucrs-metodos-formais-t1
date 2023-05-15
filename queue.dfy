@@ -1,19 +1,8 @@
-    /*
-    fila de tamanho ilimitado com arrays circulares
-    representação ghost: coleção de elementos da fila e qualquer outra informação necessária
-    predicate: invariante da representação abstrata associada à coleção do tipo fila
-
-    Operações
-        - construtor inicia fila fazia
-        - adicionar novo elemento na fila -> enfileira()
-        - remover um elemento da fila e retornar seu valor caso a fila contenha elementos  -> desenfileira()
-        - verificar se um elemento pertence a fila  -> contem()
-        - retornar numero de elementos da fila -> tamanho()
-        - verificar se a fila é vazia ou não -> estaVazia()
-        - concatenar duas filas retornando uma nova fila sem alterar nenhuma das outras -> concat()
-
-    criar método main testando a implementação 
-*/
+ghost predicate DifferentQueues(q1: Queue, q2: Queue)
+  reads q1, q2
+{
+  q1.a != q2.a && q1.Content != q2.Content && q1 != q2
+}
 
 ghost predicate ContentIsValid(Content: seq<int>, a: array<int>, head: nat, contentSize:nat, MaxSize: nat)
   requires a.Length == MaxSize
@@ -42,13 +31,14 @@ class {:autocontracts} Queue {
               else a[head..] + a[..head+contentSize-MaxSize])
     }
 
-    constructor()
+    constructor(initialSize: nat)
       ensures Content == []
-      ensures MaxSize == 3
+      ensures MaxSize == initialSize
+      ensures head == 0
     {
-    a := new int[3];
+    a := new int[initialSize];
     head, contentSize := 0, 0;
-    Content, MaxSize := [], 3;
+    Content, MaxSize := [], initialSize;
     }
 
   method enqueue(e: int)
@@ -87,7 +77,7 @@ class {:autocontracts} Queue {
     requires |Content| > 0
     ensures Content == old(Content)
     ensures r <==> el in Content
-  {
+    {
     var headCopy := head;
     var ContentCopy := Content;
     var contentSizeCopy := contentSize;
@@ -103,34 +93,118 @@ class {:autocontracts} Queue {
     {
       var e := a[headCopy];
       assert e == ContentCopy[0];
+      assert e in Content;
       if (e == el) {
         r:= true;
         return;
-      }
+    }
       count := count + 1;
       headCopy, contentSizeCopy := if headCopy + 1 == a.Length then 0 else headCopy + 1, contentSizeCopy - 1;
       ContentCopy := ContentCopy[1..];
     }
-  }
+    }
 
   function size(): nat
     ensures size() == |Content|
-  {
-    contentSize
-  }
+    {
+                 contentSize
+    }
 
   function isEmpty(): bool
     ensures isEmpty() == (|Content| == 0) {
-    contentSize == 0
-  }
+                          contentSize == 0
+    }
 
-  // method concat(queue: Queue) returns (newQueue: Queue)
-  //   requires queue.Valid()
-  //   requires |queue.Content| > 0
-  //   requires |Content| > 0
-  //   ensures queue.Content == old(queue.Content)
-  //   ensures Content == old(Content)
-  //   ensures newQueue.Content == Content + queue.Content
+  method concat(queue: Queue) returns (newQueue: Queue)
+    requires queue.Valid()
+    requires |queue.Content| > 0
+    requires |Content| > 0
+    requires DifferentQueues(this, queue)
+
+    ensures queue.a == old(queue.a)
+    ensures queue.Content == old(queue.Content)
+    ensures Content == old(Content)
+    ensures newQueue.Content == Content + queue.Content
+  {
+    newQueue := new Queue(contentSize + queue.contentSize + 1);
+    assert newQueue.MaxSize == contentSize + queue.contentSize + 1;
+    assert newQueue.Valid();
+
+    var count := 0;
+    var i := head;
+
+    while count < contentSize
+      invariant 0 <= i < a.Length
+      invariant 0 <= count < newQueue.a.Length
+      invariant 0 <= count <= contentSize
+      invariant contentSize == old(contentSize)
+      invariant Content == old(Content)
+      invariant a == old(a)
+      invariant Valid()
+      invariant Repr == old(Repr)
+
+      invariant queue.contentSize == old(queue.contentSize)
+      invariant queue.Content == old(queue.Content)
+      invariant queue.a == old(queue.a)
+      invariant queue.Valid()
+
+      invariant fresh(newQueue.a)
+      invariant fresh(newQueue.Repr)
+      invariant newQueue.contentSize == count
+      invariant newQueue.contentSize == |newQueue.Content|
+      invariant newQueue.head == 0
+      invariant newQueue.Valid()
+      invariant newQueue.a.Length == contentSize + queue.contentSize + 1
+    {
+      var value := a[i];
+
+      newQueue.a[count] := value;
+      newQueue.Content := newQueue.Content + [value];
+      newQueue.contentSize := newQueue.contentSize + 1;
+
+      i := if i + 1 == a.Length then 0 else i + 1;
+      count := count + 1;
+    }
+
+    count := 0;
+    i := queue.head;
+    var index := newQueue.contentSize;
+    while count < queue.contentSize
+      invariant 0 <= i < queue.a.Length
+      invariant 0 <= index <= newQueue.a.Length
+      invariant index - count == contentSize
+      invariant contentSize == old(contentSize)
+      invariant Content == old(Content)
+      invariant a == old(a)
+      invariant Valid()
+      invariant Repr == old(Repr)
+
+      invariant queue.contentSize == old(queue.contentSize)
+      invariant queue.Content == old(queue.Content)
+      invariant queue.a == old(queue.a)
+      invariant queue.Valid()
+
+      invariant fresh(newQueue.a)
+      invariant fresh(newQueue.Repr)
+      invariant newQueue.contentSize == count + contentSize
+      invariant newQueue.contentSize == |newQueue.Content|
+      invariant newQueue.head == 0
+      invariant newQueue.Valid()
+      invariant newQueue.a.Length == contentSize + queue.contentSize + 1
+    {
+      var value := queue.a[i];
+      newQueue.a[index] := value;
+      newQueue.Content := newQueue.Content + [value];
+      newQueue.contentSize := newQueue.contentSize + 1;
+
+      i := if i + 1 == queue.a.Length then 0 else i + 1;
+      count := count + 1;
+      index := index + 1;
+    }
+
+    newQueue.Content := Content + queue.Content;
+
+  }
 }
 
 method Print(fila: Queue) {
@@ -145,7 +219,7 @@ method Print(fila: Queue) {
 
 method Main() {
   // add 2 items
-  var queue := new Queue();
+  var queue := new Queue(3);
   assert queue.size() == 0;
 
   queue.enqueue(1);
@@ -174,9 +248,17 @@ method Main() {
   assert queue.size() == 4;
 
   // is empty
-  var queue2 := new Queue();
+  var queue2 := new Queue(3);
   assert queue2.isEmpty();
-  queue2.enqueue(1);
+  queue2.enqueue(6);
   var v := queue2.dequeue();
   assert queue2.isEmpty();
+  queue2.enqueue(6);
+  queue2.enqueue(7);
+
+  // concat
+  var newQueue := queue.concat(queue2);
+  assert newQueue.Content == [2, 3, 4, 5, 6, 7];
+  Print(newQueue);
+  // assert newQueue.Content == [2, 3, 4, 5];
 }
