@@ -4,46 +4,46 @@ ghost predicate DifferentQueues(q1: Queue, q2: Queue)
   q1.a != q2.a && q1.Content != q2.Content && q1 != q2
 }
 
-ghost predicate ContentIsValid(Content: seq<int>, a: array<int>, head: nat, contentSize:nat, MaxSize: nat)
-  requires a.Length == MaxSize
-  requires MaxSize == 0 ==> contentSize == head == 0 && Content == []
-  requires MaxSize != 0 ==> contentSize <= MaxSize && head < MaxSize
+ghost predicate ContentIsValid(Content: seq<int>, a: array<int>, head: nat, contentSize:nat, ArraySize: nat)
+  requires a.Length == ArraySize
+  requires ArraySize == 0 ==> contentSize == head == 0 && Content == []
+  requires ArraySize != 0 ==> contentSize <= ArraySize && head < ArraySize
   reads a
 {
-  (Content == if head + contentSize <= MaxSize then a[head..head+contentSize]
-              else a[head..] + a[..head+contentSize-MaxSize])
+  (Content == if head + contentSize <= ArraySize then a[head..head+contentSize]
+              else a[head..] + a[..head+contentSize-ArraySize])
 }
 
 class {:autocontracts} Queue {
 
   ghost var Content: seq<int>;
-  ghost var MaxSize: nat
+  ghost var ArraySize: nat
 
   var a: array<int>
   var head: nat
   var contentSize: nat
 
   ghost predicate Valid() {
-    (a.Length == MaxSize) &&
-    (MaxSize == 0 ==> contentSize == head == 0 && Content == []) &&
-    (MaxSize != 0 ==> contentSize <= MaxSize && head < MaxSize) &&
-    (Content == if head + contentSize <= MaxSize then a[head..head+contentSize]
-                else a[head..] + a[..head+contentSize-MaxSize])
+    (a.Length == ArraySize) &&
+    (ArraySize == 0 ==> contentSize == head == 0 && Content == []) &&
+    (ArraySize != 0 ==> contentSize <= ArraySize && head < ArraySize) &&
+    (Content == if head + contentSize <= ArraySize then a[head..head+contentSize]
+                else a[head..] + a[..head+contentSize-ArraySize])
   }
 
   constructor(initialSize: nat)
     ensures Content == []
-    ensures MaxSize == initialSize
+    ensures ArraySize == initialSize
     ensures head == 0
   {
     a := new int[initialSize];
     head, contentSize := 0, 0;
-    Content, MaxSize := [], initialSize;
+    Content, ArraySize := [], initialSize;
   }
 
   method enqueue(e: int)
     ensures Content == old(Content) + [e]
-    ensures MaxSize >= old(MaxSize)
+    ensures ArraySize >= old(ArraySize)
   {
     if a.Length == contentSize {
       // duplica o tamanho da array
@@ -52,7 +52,7 @@ class {:autocontracts} Queue {
       forall i | 0 <= i < a.Length {
         d[if i < head then i else i + more] := a[i];
       }
-      MaxSize, a, head := MaxSize + more, d, if contentSize == 0 then 0 else head + more;
+      ArraySize, a, head := ArraySize + more, d, if contentSize == 0 then 0 else head + more;
     }
     var nextEmpty := if head + contentSize < a.Length
     then head + contentSize
@@ -87,7 +87,7 @@ class {:autocontracts} Queue {
     while count < contentSize
       invariant 0 <= headCopy < a.Length
       invariant contentSizeCopy == contentSize - count
-      invariant ContentIsValid(Content[count..], a, headCopy, contentSize - count, MaxSize)
+      invariant ContentIsValid(Content[count..], a, headCopy, contentSize - count, ArraySize)
 
       invariant Content[count..] == ContentCopy
       invariant forall j : nat :: 0 <= j < count ==> Content[j] != el
@@ -127,7 +127,7 @@ class {:autocontracts} Queue {
     ensures newQueue.Content == Content + queue.Content
   {
     newQueue := new Queue(contentSize + queue.contentSize);
-    assert newQueue.MaxSize == contentSize + queue.contentSize;
+    assert newQueue.ArraySize == contentSize + queue.contentSize;
     assert newQueue.Valid();
 
     var count := 0;
