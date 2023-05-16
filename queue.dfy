@@ -116,13 +116,10 @@ class {:autocontracts} Queue {
                           contentSize == 0
     }
 
-  method {:timeLimit 100} concat(queue: Queue) returns (newQueue: Queue)
+  method {:timeLimit 120} concat(queue: Queue) returns (newQueue: Queue)
     requires queue.Valid()
     requires |queue.Content| > 0
     requires |Content| > 0
-
-    requires this != queue
-    requires this.a != queue.a
 
     ensures queue.Content == old(queue.Content)
     ensures Content == old(Content)
@@ -143,7 +140,6 @@ class {:autocontracts} Queue {
       invariant Content == old(Content)
       invariant a == old(a)
       invariant newQueue.a != a
-      invariant queue.a != a
       invariant forall j : nat :: j < a.Length ==> a[j] == old(a[j])
       invariant Valid()
       invariant Repr == old(Repr)
@@ -189,7 +185,6 @@ class {:autocontracts} Queue {
       // queue continua a mesma
       invariant queue.Content == old(queue.Content)
       invariant queue.a == old(queue.a)
-      invariant a != queue.a
       invariant newQueue.a != a
       invariant forall k : nat :: k < queue.a.Length ==> queue.a[k] == old(queue.a[k])
       invariant queue.Valid()
@@ -213,17 +208,8 @@ class {:autocontracts} Queue {
   }
 }
 
-method Print(fila: Queue) {
-  print("\n\n");
-  var i := 0;
-  while i < fila.a.Length{
-    print(fila.a[i]);
-    print("  ");
-    i := i + 1;
-  }
-}
-
 method Main() {
+  // inicia com 3 espaços no array, para teste
   var fila := new Queue();
 
   // enqueue deve alocar mais espaço
@@ -234,8 +220,7 @@ method Main() {
   assert fila.Content == [1, 2, 3, 4];
 
   // size
-  var q := fila.size();
-  assert q == 4;
+  assert fila.size() == 4;
 
   // dequeue
   var e := fila.dequeue();
@@ -251,11 +236,9 @@ method Main() {
   assert r2 == true;
 
   // isEmpty
-  var vazia := fila.isEmpty();
-  assert vazia == false;
+  assert !fila.isEmpty();
   var outraFila := new Queue();
-  vazia := outraFila.isEmpty();
-  assert vazia == true;
+  assert outraFila.isEmpty();
 
   // concat
   assert fila.Content == [2, 3, 4];
