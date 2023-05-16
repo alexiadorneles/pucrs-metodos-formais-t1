@@ -1,11 +1,11 @@
-ghost predicate ContentIsValid(Content: seq<int>, a: array<int>, head: nat, contentSize:nat, ArraySize: nat)
-  requires a.Length == ArraySize
-  requires ArraySize == 0 ==> contentSize == head == 0 && Content == []
-  requires ArraySize != 0 ==> contentSize <= ArraySize && head < ArraySize
+ghost predicate ContentIsValid(Content: seq<int>, a: array<int>, head: nat)
+  requires a.Length == a.Length
+  requires a.Length == 0 ==> |Content| == head == 0 && Content == []
+  requires a.Length != 0 ==> |Content| <= a.Length && head < a.Length
   reads a
 {
-  (Content == if head + contentSize <= ArraySize then a[head..head+contentSize]
-              else a[head..] + a[..head+contentSize-ArraySize])
+  (Content == if head + |Content| <= a.Length then a[head..head+|Content|]
+              else a[head..] + a[..head+|Content|-a.Length])
 }
 
 
@@ -85,7 +85,7 @@ class {:autocontracts} Queue {
     while count < contentSize
       invariant 0 <= i < a.Length
       invariant 0 <= count <= contentSize
-      invariant ContentIsValid(Content[count..], a, i, contentSize - count, ArraySize)
+      invariant ContentIsValid(Content[count..], a, i)
 
       invariant Content[count..] == ContentCopy
       invariant forall j : nat :: 0 <= j < count ==> Content[j] != el
