@@ -1,3 +1,4 @@
+// Alunos: Aléxia Dorneles, Bruno Chanan, Lucas Susin, Clada D'ávila
 ghost predicate ContentIsValid(Content: seq<int>, a: array<int>, head: nat)
   requires a.Length == a.Length
   requires a.Length == 0 ==> |Content| == head == 0 && Content == []
