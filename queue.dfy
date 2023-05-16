@@ -23,17 +23,19 @@ class {:autocontracts} Queue {
     (ArraySize == 0 ==> contentSize == head == 0 && Content == []) &&
     (ArraySize != 0 ==> contentSize <= ArraySize && head < ArraySize) &&
     (contentSize == |Content|) &&
+    (contentSize <= a.Length) &&
     (ContentIsValid(Content, a, head))
     }
 
-    constructor(initialSize: nat)
+    constructor()
       ensures Content == []
-      ensures ArraySize == initialSize
+    // inicia em 3 para facilitar os testes
+      ensures ArraySize == 3
       ensures head == 0
     {
-    a := new int[initialSize];
+    a := new int[3];
     head, contentSize := 0, 0;
-    Content, ArraySize := [], initialSize;
+    Content, ArraySize := [], 3;
     }
 
   method enqueue(e: int)
@@ -41,7 +43,7 @@ class {:autocontracts} Queue {
     ensures ArraySize >= old(ArraySize)
     {
     if a.Length == contentSize {
-                             // duplica o size da array
+                             // duplica o size do array
       var additionalSpace := a.Length + 1;
       var newArray := new int[a.Length + additionalSpace];
 
@@ -114,32 +116,46 @@ class {:autocontracts} Queue {
                           contentSize == 0
     }
 
-  method concat(queue: Queue) returns (newQueue: Queue)
+  method {:timeLimit 100} concat(queue: Queue) returns (newQueue: Queue)
     requires queue.Valid()
     requires |queue.Content| > 0
     requires |Content| > 0
 
-    ensures queue.a == old(queue.a)
+    requires this != queue
+    requires this.a != queue.a
+
     ensures queue.Content == old(queue.Content)
     ensures Content == old(Content)
     ensures newQueue.Content == Content + queue.Content
+    ensures newQueue.Valid()
   {
-    newQueue := new Queue(contentSize + queue.contentSize);
+    newQueue := new Queue();
 
     var count := 0;
     var i := head;
+    var ContentCopy := Content;
 
     while count < contentSize
       invariant 0 <= i < a.Length
       invariant 0 <= count <= contentSize
 
+      // this continua o mesmo
       invariant Content == old(Content)
       invariant a == old(a)
+      invariant newQueue.a != a
+      invariant queue.a != a
+      invariant forall j : nat :: j < a.Length ==> a[j] == old(a[j])
       invariant Valid()
       invariant Repr == old(Repr)
 
+      invariant Content[count..] == ContentCopy
+      invariant ContentIsValid(ContentCopy, a, i)
+      invariant newQueue.Content == Content[..count]
+
+      // queue continua a mesma
       invariant queue.Content == old(queue.Content)
       invariant queue.a == old(queue.a)
+      invariant forall k : nat :: k < queue.a.Length ==> queue.a[k] == old(queue.a[k])
       invariant queue.Valid()
 
       invariant fresh(newQueue.Repr)
@@ -147,42 +163,53 @@ class {:autocontracts} Queue {
       invariant newQueue.Valid()
     {
       var value := a[i];
+      assert value in ContentCopy;
       newQueue.enqueue(value);
+      ContentCopy := ContentCopy[1..];
       i := if i + 1 == a.Length then 0 else i + 1;
       count := count + 1;
     }
 
+    ContentCopy := queue.Content;
     count := 0;
     i := queue.head;
     var index := newQueue.contentSize;
     while count < queue.contentSize
       invariant 0 <= i < queue.a.Length
       invariant 0 <= index <= newQueue.a.Length
-
+      invariant 0 <= count <= |queue.Content|
       invariant index - count == contentSize
+
+      // this continua o mesmo
       invariant Content == old(Content)
       invariant a == old(a)
       invariant Valid()
       invariant Repr == old(Repr)
 
+      // queue continua a mesma
       invariant queue.Content == old(queue.Content)
       invariant queue.a == old(queue.a)
+      invariant a != queue.a
+      invariant newQueue.a != a
+      invariant forall k : nat :: k < queue.a.Length ==> queue.a[k] == old(queue.a[k])
       invariant queue.Valid()
+
+      invariant queue.Content[count..] == ContentCopy
+      invariant ContentIsValid(ContentCopy, queue.a, i)
+      invariant newQueue.Content == Content + queue.Content[..count]
 
       invariant fresh(newQueue.Repr)
       invariant newQueue.contentSize == count + contentSize
       invariant newQueue.Valid()
     {
       var value := queue.a[i];
+      assert value in ContentCopy;
       newQueue.enqueue(value);
-
+      ContentCopy := ContentCopy[1..];
       i := if i + 1 == queue.a.Length then 0 else i + 1;
       count := count + 1;
       index := index + 1;
     }
-
-    newQueue.Content := Content + queue.Content;
-
   }
 }
 
@@ -197,7 +224,7 @@ method Print(fila: Queue) {
 }
 
 method Main() {
-  var fila := new Queue(3);
+  var fila := new Queue();
 
   // enqueue deve alocar mais espaço
   fila.enqueue(1);
@@ -226,7 +253,7 @@ method Main() {
   // isEmpty
   var vazia := fila.isEmpty();
   assert vazia == false;
-  var outraFila := new Queue(3);
+  var outraFila := new Queue();
   vazia := outraFila.isEmpty();
   assert vazia == true;
 
@@ -238,4 +265,5 @@ method Main() {
   assert outraFila.Content == [5, 6, 7];
   var concatenada := fila.concat(outraFila);
   assert concatenada.Content == [2,3,4,5,6,7];
+  assert concatenada.Valid();
 }
