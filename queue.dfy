@@ -22,32 +22,32 @@ class {:autocontracts} Queue {
     (a.Length == ArraySize) &&
     (ArraySize == 0 ==> contentSize == head == 0 && Content == []) &&
     (ArraySize != 0 ==> contentSize <= ArraySize && head < ArraySize) &&
-    (Content == if head + contentSize <= ArraySize then a[head..head+contentSize]
-                else a[head..] + a[..head+contentSize-ArraySize])
-  }
+    (contentSize == |Content|) &&
+    (ContentIsValid(Content, a, head))
+    }
 
-  constructor(initialSize: nat)
-    ensures Content == []
-    ensures ArraySize == initialSize
-    ensures head == 0
-  {
+    constructor(initialSize: nat)
+      ensures Content == []
+      ensures ArraySize == initialSize
+      ensures head == 0
+    {
     a := new int[initialSize];
     head, contentSize := 0, 0;
     Content, ArraySize := [], initialSize;
-  }
+    }
 
   method enqueue(e: int)
     ensures Content == old(Content) + [e]
     ensures ArraySize >= old(ArraySize)
-  {
+    {
     if a.Length == contentSize {
-      // duplica o size da array
+                             // duplica o size da array
       var additionalSpace := a.Length + 1;
       var newArray := new int[a.Length + additionalSpace];
 
       forall i | 0 <= i < a.Length {
         newArray[if i < head then i else i + additionalSpace] := a[i];
-      }
+    }
 
       ArraySize := ArraySize + additionalSpace;
       a := newArray;
@@ -58,25 +58,25 @@ class {:autocontracts} Queue {
     a[tail] := e;
     contentSize := contentSize + 1;
     Content := Content + [e];
-  }
+    }
 
   method dequeue() returns (e: int)
     requires |Content| > 0
     ensures Content == old(Content)[1..]
     ensures old(Content)[0] == e
-  {
+    {
     e := a[head];
     assert e == Content[0];
     head := if head + 1 == a.Length then 0 else head + 1;
     contentSize := contentSize - 1;
     Content := Content[1..];
-  }
+    }
 
   method contains(el: int) returns (r: bool)
     requires |Content| > 0
     ensures Content == old(Content)
     ensures r <==> el in Content
-  {
+    {
     var i := head;
     var ContentCopy := Content;
     r := false;
@@ -96,23 +96,23 @@ class {:autocontracts} Queue {
       if (e == el) {
         r:= true;
         return;
-      }
+    }
       count := count + 1;
       i:= if i + 1 == a.Length then 0 else i + 1;
       ContentCopy := ContentCopy[1..];
     }
-  }
+    }
 
   function size(): nat
     ensures size() == |Content|
-  {
-    contentSize
-  }
+    {
+                 contentSize
+    }
 
   function isEmpty(): bool
     ensures isEmpty() == (|Content| == 0) {
-    contentSize == 0
-  }
+                          contentSize == 0
+    }
 
   method concat(queue: Queue) returns (newQueue: Queue)
     requires queue.Valid()
