@@ -9,18 +9,6 @@ ghost predicate ContentIsValid(Content: seq<int>, a: array<int>, head: nat, cont
 }
 
 
-ghost predicate SameQueue(q1: Queue, q2: Queue)
-  reads q1, q2, q1.a, q2.a
-{
-  q1 == q2
-  && q1.Content == q2.Content
-  && q1.a.Length == q2.a.Length
-  && (forall j : nat :: j < q1.a.Length ==> q1.a[j] == q2.a[j])
-  && q1.head == q2.head
-  && q1.ArraySize == q2.ArraySize
-  && q1.contentSize == q2.contentSize
-}
-
 class {:autocontracts} Queue {
 
   ghost var Content: seq<int>;
@@ -137,41 +125,29 @@ class {:autocontracts} Queue {
     ensures newQueue.Content == Content + queue.Content
   {
     newQueue := new Queue(contentSize + queue.contentSize);
-    assert newQueue.ArraySize == contentSize + queue.contentSize;
-    assert newQueue.Valid();
 
     var count := 0;
     var i := head;
 
     while count < contentSize
       invariant 0 <= i < a.Length
-      invariant 0 <= count < newQueue.a.Length
       invariant 0 <= count <= contentSize
-      invariant contentSize == old(contentSize)
+
       invariant Content == old(Content)
       invariant a == old(a)
       invariant Valid()
       invariant Repr == old(Repr)
 
-      invariant queue.contentSize == old(queue.contentSize)
       invariant queue.Content == old(queue.Content)
       invariant queue.a == old(queue.a)
       invariant queue.Valid()
 
-      invariant fresh(newQueue.a)
       invariant fresh(newQueue.Repr)
       invariant newQueue.contentSize == count
-      invariant newQueue.contentSize == |newQueue.Content|
-      invariant newQueue.head == 0
       invariant newQueue.Valid()
-      invariant newQueue.a.Length == contentSize + queue.contentSize
     {
       var value := a[i];
-
-      newQueue.a[count] := value;
-      newQueue.Content := newQueue.Content + [value];
-      newQueue.contentSize := newQueue.contentSize + 1;
-
+      newQueue.enqueue(value);
       i := if i + 1 == a.Length then 0 else i + 1;
       count := count + 1;
     }
@@ -182,30 +158,23 @@ class {:autocontracts} Queue {
     while count < queue.contentSize
       invariant 0 <= i < queue.a.Length
       invariant 0 <= index <= newQueue.a.Length
+
       invariant index - count == contentSize
-      invariant contentSize == old(contentSize)
       invariant Content == old(Content)
       invariant a == old(a)
       invariant Valid()
       invariant Repr == old(Repr)
 
-      invariant queue.contentSize == old(queue.contentSize)
       invariant queue.Content == old(queue.Content)
       invariant queue.a == old(queue.a)
       invariant queue.Valid()
 
-      invariant fresh(newQueue.a)
       invariant fresh(newQueue.Repr)
       invariant newQueue.contentSize == count + contentSize
-      invariant newQueue.contentSize == |newQueue.Content|
-      invariant newQueue.head == 0
       invariant newQueue.Valid()
-      invariant newQueue.a.Length == contentSize + queue.contentSize
     {
       var value := queue.a[i];
-      newQueue.a[index] := value;
-      newQueue.Content := newQueue.Content + [value];
-      newQueue.contentSize := newQueue.contentSize + 1;
+      newQueue.enqueue(value);
 
       i := if i + 1 == queue.a.Length then 0 else i + 1;
       count := count + 1;
